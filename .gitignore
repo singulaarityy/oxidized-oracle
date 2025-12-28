@@ -1,0 +1,17 @@
+# --- Rust Ignored ---
+/target
+/backend-oracle/target
+**/*.rs.bk
+Cargo.lock
+
+# --- IoT/C++ Ignored ---
+.pio
+.vscode
+**/.DS_Store
+**/build
+
+# --- SECURITY (JANGAN SAMPAI LOLOS) ---
+.env
+keys.json
+private_key.pem
+secrets.h
