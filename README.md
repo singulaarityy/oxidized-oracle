@@ -1,40 +1,111 @@
-# Veritas Edge: Trusted IoT Oracle 🦀 + 📡
+# Oxidized Oracle 🦀 + 📡 + 🔗
 
 ![Rust](https://img.shields.io/badge/Backend-Rust-orange?style=for-the-badge&logo=rust)
-![C++](https://img.shields.io/badge/Firmware-C++-blue?style=for-the-badge&logo=c%2B%2B)
+![MQTT](https://img.shields.io/badge/Protocol-MQTT-blue?style=for-the-badge&logo=mqtt)
 ![Solana](https://img.shields.io/badge/Network-Solana-purple?style=for-the-badge&logo=solana)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-## 📖 Introduction
+**Oxidized Oracle** is a high-performance, decentralized bridge between the physical world and the Solana Blockchain. It solves the "Oracle Problem" for IoT by enforcing cryptographic integrity at the hardware edge.
 
-**Veritas Edge** is a Proof-of-Concept for a Decentralized Physical Infrastructure Network (DePIN). It solves the "Garbage In, Garbage Out" problem in IoT-Blockchain integration.
+---
 
-Instead of trusting the data blindly, this system ensures data integrity by performing **cryptographic signing at the hardware edge**.
+## ⚡ Key Features
 
-### The Problem
-In standard IoT systems, a compromised server or a Man-in-the-Middle attack can alter sensor data before it reaches the database.
-
-### Our Solution
-1.  **Identity:** The IoT device (ESP32) generates a unique Ed25519 keypair on-chip. The private key never leaves the device.
-2.  **Signing:** Every sensor reading is hashed and signed locally by the device.
-3.  **Verification:** The Rust backend verifies the signature. If valid, the data hash is committed to the Solana Blockchain as immutable proof.
+- **🚀 Blazing Fast**: Written in Rust using `Tokio` and `Rumqttc` for asynchronous performance.
+- **🔒 Edge Security**: Uses Ed25519 signing. The private key never leaves the IoT device.
+- **📡 Real-Time**: Full MQTT support with instantaneous feedback loops.
+- **💎 Trustless**: Data is verified cryptographically before being hashed and committed to Solana.
+- **🔄 Feedback Loop**: The device receives the Solana Transaction URL immediately after confirmation.
 
 ---
 
 ## 🏗️ Architecture
 
+The system uses a bidirectional flow to ensure data integrity and transparency.
+
 ```mermaid
 sequenceDiagram
-    participant Device as ESP32 (IoT)
-    participant Server as Rust Backend
-    participant Chain as Solana Devnet
+    autonumber
+    participant Device as 🤖 IoT Device (ESP32)
+    participant Broker as ☁️ MQTT Broker
+    participant Oracle as 🦀 Oxidized Oracle
+    participant Solana as 🔗 Solana Blockchain
+
+    Note over Device: 1. Read Sensor Data<br/>2. Sign Payload (Ed25519)
+    Device->>Broker: Publish to "sensor/data"
+    Broker->>Oracle: Forward Message
     
-    Device->>Device: Read Sensor & Sign Data (Ed25519)
-    Device->>Server: Send JSON {Data + Signature}
-    Server->>Server: Verify Signature with Public Key
+    Oracle->>Oracle: 🛑 Verify Signature & Timestamp
+    
     alt Signature Valid
-        Server->>Chain: Submit Data Hash (Memo Transaction)
-        Chain-->>Server: Transaction Confirmed
-        Server-->>Device: Success (200 OK)
+        Oracle->>Solana: Submit Memo Transaction (Data Hash)
+        Solana-->>Oracle: Transaction Confirmed (Tx Signature)
+        
+        Note over Oracle: Create Receipt
+        Oracle->>Broker: Publish Receipt to "oracle/response"
+        Broker->>Device: Forward Receipt (Tx URL)
+        Device->>Device: ✅ Display Confirmation
     else Signature Invalid
-        Server-->>Device: Reject (401 Unauthorized)
+        Oracle->>Broker: Log Error
     end
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **Rust Toolchain**: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+- **Solana Tool Suite** (Optional, for creating wallets)
+
+### 1. Configuration
+Copy the example environment file and configure it.
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+```ini
+# MQTT Configuration
+MQTT_HOST=your.hivemq.cloud
+MQTT_PORT=8883
+MQTT_USERNAME=user
+MQTT_PASSWORD=pass
+MQTT_CLIENT_ID=oxidized-oracle-server
+MQTT_TOPIC=sensor/data
+MQTT_RESPONSE_TOPIC=oracle/response
+
+# Solana Configuration
+SOLANA_RPC_URL=https://api.devnet.solana.com
+# Your Wallet Keypair as a JSON Byte Array (e.g., from solana-keygen new)
+SOLANA_WALLET_KEY=[123, 45, ...] 
+```
+
+### 2. Run the Oracle (Backend)
+Start the server to listen for MQTT messages.
+```bash
+cargo run
+```
+
+### 3. Run the Simulator (Fake IoT)
+In a separate terminal, run the simulator to pretend to be an ESP32 device.
+```bash
+cargo run --example fake_iot
+```
+*The simulator will generate random data, sign it, sending it to the Oracle, and wait for the Solana confirmation URL.*
+
+---
+
+## 📂 Project Structure
+
+- `src/main.rs`: Entry point and runtime initialization.
+- `src/config.rs`: Centralized configuration loading (Env + Wallet).
+- `src/api/mqtt.rs`: Async MQTT event loop handler.
+- `src/crypto/verify.rs`: Ed25519 verification and Timestamp logic.
+- `src/solana/client.rs`: Solana transaction builder.
+- `examples/fake_iot.rs`: A complete simulator for testing/demo purposes.
+
+---
+
+Built with ❤️ by **[Unknown Developer]**.
