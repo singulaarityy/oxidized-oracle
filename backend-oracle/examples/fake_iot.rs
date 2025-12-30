@@ -12,7 +12,6 @@ use rustls::{ClientConfig, RootCertStore, Certificate};
 use rustls_native_certs::load_native_certs;
 use std::sync::Arc;
 
-// --- STRUKTUR DATA ---
 #[derive(Debug, Serialize)]
 struct CryptoEnvelope {
     public_key: String,
@@ -29,7 +28,7 @@ async fn main() {
     mqttoptions.set_keep_alive(Duration::from_secs(5));
     mqttoptions.set_credentials("USERNAME_MQTT", "PASSWORD_MQTT");
 
-    // TLS Setup (Wajib untuk HiveMQ Cloud)
+    // TLS Setup
     let mut root_store = RootCertStore::empty();
     for cert in load_native_certs().expect("Failed to load system certs") {
         root_store.add(&Certificate(cert.0)).unwrap();

@@ -66,7 +66,7 @@ pub async fn process_submit_data(envelope: CryptoEnvelope, config: Arc<AppConfig
                     Ok(url) => {
                         println!("{} {}", "🎉 Tx Sent:".green().bold(), url);
                         
-                        // FEEDBACK LOOP: Kirim URL balik ke MQTT
+                        // FEEDBACK LOOP
                         let response_payload = json!({
                             "device_id": data.device_id,
                             "status": "success",

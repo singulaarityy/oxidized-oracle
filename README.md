@@ -74,7 +74,6 @@ MQTT_USERNAME=user
 MQTT_PASSWORD=pass
 MQTT_CLIENT_ID=oxidized-oracle-server
 MQTT_TOPIC=sensor/data
-MQTT_RESPONSE_TOPIC=oracle/response
 
 # Solana Configuration
 SOLANA_RPC_URL=https://api.devnet.solana.com
@@ -108,4 +107,4 @@ cargo run --example fake_iot
 
 ---
 
-Built with ❤️ by **[Unknown Developer]**.
+Built with ❤️ by **[@singulaarityy](https://github.com/singulaarityy) and **[@yasaa7z](https://github.com/yasaa7z)**.
