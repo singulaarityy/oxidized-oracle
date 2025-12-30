@@ -45,7 +45,7 @@ async fn main() {
     // 5. KIRIM VIA HTTP POST
     let client = reqwest::Client::new();
     // Pastikan portnya 3000 sesuai server main.rs Anda
-    let res = client.post("http://localhost:3000/api/submit")
+    let res = client.post("https://eba498e4cbdf.ngrok-free.app/api/submit")
         .json(&envelope)
         .send()
         .await;

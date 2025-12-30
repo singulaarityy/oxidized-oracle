@@ -9,26 +9,34 @@ use solana_sdk::{
 };
 use std::str::FromStr;
 
-// Alamat Program "Memo" (Aplikasi catatan bawaan Solana)
-const MEMO_PROGRAM_ID: &str = "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo";
+// Hapus konstanta hardcoded
+// const MEMO_PROGRAM_ID: &str = "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo";
 
 pub fn catat_ke_blockchain(pesan_valid: &str) -> Result<String, String> {
-    println!("🔗 Memulai koneksi ke Solana Devnet...");
+    println!("🔗 Memulai koneksi ke Solana...");
 
     // 1. KONEKSI KE RPC (Jaringan)
-    let rpc_url = "https://api.devnet.solana.com";
+    let rpc_url = std::env::var("SOLANA_RPC_URL").unwrap_or_else(|_| "https://api.devnet.solana.com".to_string());
     let client = RpcClient::new_with_commitment(rpc_url, CommitmentConfig::confirmed());
 
     // 2. LOAD DOMPET SERVER
-    // PENTING: Pastikan path ini benar mengarah ke file wallet Anda di Linux
-    let home = std::env::var("HOME").unwrap();
-    let wallet_path = format!("{}/server-wallet.json", home);
+    let home = std::env::var("HOME").unwrap(); // Tetap pakai HOME untuk fallback path kalau perlu, atau pakai full path dari env
     
+    // Cek apakah SOLANA_WALLET_PATH absolute atau relative
+    let configured_path = std::env::var("SOLANA_WALLET_PATH").unwrap_or_else(|_| "server-wallet.json".to_string());
+    let wallet_path = if configured_path.starts_with("/") {
+        configured_path
+    } else {
+        format!("{}/{}", home, configured_path)
+    };
+
     let payer = read_keypair_file(&wallet_path)
         .map_err(|e| format!("Gagal baca wallet di {}: {}", wallet_path, e))?;
 
     // 3. BUAT INSTRUKSI MEMO
-    let memo_program_id = Pubkey::from_str(MEMO_PROGRAM_ID).unwrap();
+    let memo_program_id_str = std::env::var("SOLANA_MEMO_PROGRAM_ID")
+        .unwrap_or_else(|_| "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo".to_string());
+    let memo_program_id = Pubkey::from_str(&memo_program_id_str).unwrap();
     let instruction = Instruction {
         program_id: memo_program_id,
         accounts: vec![],

@@ -1,29 +1,28 @@
 use ed25519_dalek::{Signature, Verifier, PublicKey};
 use hex;
 use crate::api::endpoint::{CryptoEnvelope, SensorData};
-use axum::{Json, http::StatusCode};
 
-pub async fn handle_submit_data(Json(envelope): Json<CryptoEnvelope>) -> Result<String, StatusCode> {
+pub async fn process_submit_data(envelope: CryptoEnvelope) -> Result<String, String> {
 
     println!("📩 Menerima Amplop dari: {}", envelope.public_key);
 
     // LANGKAH A: DECODE HEX
     // Kita ubah string hex menjadi vector of bytes (Vec<u8>)
     let pub_key_bytes = hex::decode(&envelope.public_key)
-        .map_err(|_| StatusCode::BAD_REQUEST)?; // Kalau gagal decode, return Error 400
+        .map_err(|_| "Invalid Public Key Hex".to_string())?;
     
     let sig_bytes = hex::decode(&envelope.signature)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
+        .map_err(|_| "Invalid Signature Hex".to_string())?;
 
     // LANGKAH B: SIAPKAN ALAT VERIFIKASI
     // Ubah bytes menjadi objek PublicKey (KTP Pengirim) - ed25519-dalek v1
     let public_key = PublicKey::from_bytes(&pub_key_bytes)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
+        .map_err(|_| "Invalid Public Key Bytes".to_string())?;
 
     // Ubah bytes menjadi objek Signature (Tanda Tangan)
     // Ed25519 Signature panjangnya harus pas 64 bytes
     let signature = Signature::try_from(sig_bytes.as_slice())
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
+        .map_err(|_| "Invalid Signature Bytes".to_string())?;
 
     // LANGKAH C: Cek Keaslian
     // "Apakah signature ini valid untuk payload (surat) ini?"
@@ -34,7 +33,7 @@ pub async fn handle_submit_data(Json(envelope): Json<CryptoEnvelope>) -> Result<
             // LANGKAH D: BUKA SURATNYA
             // Karena valid, kita aman mengubah payload string menjadi SensorData struct
             let data: SensorData = serde_json::from_str(&envelope.payload)
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+                .map_err(|_| "Failed to Parse Payload JSON".to_string())?;
 
             println!("📊 Data Terbaca: Device={}, Suhu={}°C, Humidity={:?}%, AirQuality={:?}", 
                 data.device_id, 
@@ -62,7 +61,7 @@ pub async fn handle_submit_data(Json(envelope): Json<CryptoEnvelope>) -> Result<
         }
         Err(_) => {
             println!("❌ Tanda Tangan PALSU / Data Berubah!");
-            Err(StatusCode::UNAUTHORIZED) // Return Error 401
+            Err("Unauthorized: Invalid Signature".to_string())
         }
     }
 }
