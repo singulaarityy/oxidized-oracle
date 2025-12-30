@@ -20,3 +20,5 @@ bs58 = "0.5"
 rustls-native-certs = "0.6" # Untuk memuat sertifikat SSL/TLS sistem
 rustls = "0.20"
 dotenvy = "0.15"
+colored = "2.0"
+chrono = "0.4"

@@ -4,6 +4,7 @@ use tokio;
 mod solana;
 mod crypto;
 mod api;
+mod config;
 
 // --- BAGIAN UTAMA (Aplikasi) ---
 #[tokio::main]
@@ -11,10 +12,12 @@ async fn main() {
     // Load .env variables
     dotenvy::dotenv().ok();
 
-    println!("🚀 Server Oracle Memulai...");
-    println!("📡 Menghubungkan ke MQTT Broker...");
+    // Load Config (Env + Wallet) ONCE
+    let config = config::AppConfig::load();
+
+    println!("🚀 Oracle Server Starting...");
+    println!("📡 Connecting to MQTT Broker...");
 
     // Jalankan MQTT Listener
-    // Fungsi ini akan loop forever
-    api::mqtt::run_mqtt_listener().await;
+    api::mqtt::run_mqtt_listener(config).await;
 }

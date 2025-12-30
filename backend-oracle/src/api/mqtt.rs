@@ -4,22 +4,16 @@ use crate::api::endpoint::CryptoEnvelope;
 use crate::crypto::verify::process_submit_data;
 use rustls;
 use rustls_native_certs;
+use crate::config::AppConfig;
+use std::sync::Arc;
+use colored::*;
 
-pub async fn run_mqtt_listener() {
-    let host = std::env::var("MQTT_HOST").expect("MQTT_HOST wajib di .env");
-    let port = std::env::var("MQTT_PORT")
-        .unwrap_or_else(|_| "8883".to_string())
-        .parse::<u16>()
-        .expect("MQTT_PORT harus angka");
-    let client_id = std::env::var("MQTT_CLIENT_ID").unwrap_or_else(|_| "oxidized-oracle-backend".to_string());
+pub async fn run_mqtt_listener(config: Arc<AppConfig>) {
     
-    let mut mqttoptions = MqttOptions::new(client_id, host, port);
+    let mut mqttoptions = MqttOptions::new(&config.mqtt_client_id, &config.mqtt_host, config.mqtt_port);
     mqttoptions.set_keep_alive(Duration::from_secs(5));
     
-    // --- AUTHENTICATION ---
-    let username = std::env::var("MQTT_USERNAME").expect("MQTT_USERNAME wajib di .env");
-    let password = std::env::var("MQTT_PASSWORD").expect("MQTT_PASSWORD wajib di .env");
-    mqttoptions.set_credentials(username, password);
+    mqttoptions.set_credentials(&config.mqtt_username, &config.mqtt_password);
 
     // --- TLS / SSL (Wajib untuk Port 8883) ---
     // Load sertifikat Root CA dari sistem operasi
@@ -40,33 +34,32 @@ pub async fn run_mqtt_listener() {
     );
     mqttoptions.set_transport(transport);
 
-    let (mut client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
+    let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
 
     // Subscribe to topic
-    let topic = std::env::var("MQTT_TOPIC").unwrap_or_else(|_| "oracle/submit".to_string());
-    client.subscribe(&topic, QoS::AtLeastOnce).await.unwrap();
+    client.subscribe(&config.mqtt_topic, QoS::AtLeastOnce).await.unwrap();
 
-    let host = std::env::var("MQTT_HOST").unwrap_or_default();
-    let port = std::env::var("MQTT_PORT").unwrap_or_default();
-    println!("📡 MQTT Listener Terhubung ke {}:{}", host, port);
-    println!("👂 Menunggu pesan di topic '{}'...", topic);
+    println!("📡 MQTT Connected: {}:{}", config.mqtt_host, config.mqtt_port);
+    println!("👂 Listening on '{}'...", config.mqtt_topic.cyan());
 
     loop {
         match eventloop.poll().await {
             Ok(notification) => {
                 match notification {
                     Event::Incoming(Packet::Publish(publish)) => {
-                        println!("📨 Pesan Masuk di topik: {}", publish.topic);
+                        println!("📨 Msg received on: {}", publish.topic.magenta());
                         
                         // Parse JSON payload
                         match serde_json::from_slice::<CryptoEnvelope>(&publish.payload) {
                             Ok(envelope) => {
-                                match process_submit_data(envelope).await {
-                                    Ok(msg) => println!("✅ Sukses: {}", msg),
-                                    Err(e) => println!("❌ Gagal Verifikasi: {}", e),
+                                // Clone config for each processing task if needed, or pass reference if async allows
+                                // process_submit_data takes Arc<AppConfig>
+                                match process_submit_data(envelope, config.clone()).await {
+                                    Ok(msg) => println!("{} {}", "✅ Success:".green(), msg),
+                                    Err(e) => println!("{} {}", "❌ Verification Failed:".red(), e),
                                 }
                             }
-                            Err(e) => println!("❌ Gagal Parse JSON Envelope: {}", e),
+                            Err(e) => println!("{} {}", "❌ JSON Parse Failed:".red(), e),
                         }
                     }
                     _ => {
@@ -75,8 +68,7 @@ pub async fn run_mqtt_listener() {
                 }
             }
             Err(e) => {
-                println!("Error dalam event loop MQTT: {:?}", e);
-                // Kita coba tunggu sebentar sebelum reconnect (rumqttc biasanya handle reconnect sendiri di eventloop, tapi kalau fatal error perlu handle)
+                println!("MQTT Loop Error: {:?}", e);
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }
         }
