@@ -54,7 +54,7 @@ pub async fn run_mqtt_listener(config: Arc<AppConfig>) {
                             Ok(envelope) => {
                                 // Clone config for each processing task if needed, or pass reference if async allows
                                 // process_submit_data takes Arc<AppConfig>
-                                match process_submit_data(envelope, config.clone()).await {
+                                match process_submit_data(envelope, config.clone(), client.clone()).await {
                                     Ok(msg) => println!("{} {}", "✅ Success:".green(), msg),
                                     Err(e) => println!("{} {}", "❌ Verification Failed:".red(), e),
                                 }

@@ -12,6 +12,7 @@ pub struct AppConfig {
     pub mqtt_password: String,
     pub mqtt_client_id: String,
     pub mqtt_topic: String,
+    pub mqtt_response_topic: String,
     
     // Solana
     pub rpc_client: RpcClient,
@@ -29,6 +30,7 @@ impl AppConfig {
         let mqtt_password = env::var("MQTT_PASSWORD").expect("MQTT_PASSWORD required");
         let mqtt_client_id = env::var("MQTT_CLIENT_ID").unwrap_or("oxidized-oracle".to_string());
         let mqtt_topic = env::var("MQTT_TOPIC").unwrap_or("oracle/submit".to_string());
+        let mqtt_response_topic = env::var("MQTT_RESPONSE_TOPIC").unwrap_or("oracle/response".to_string());
 
         // Solana Setup
         let rpc_url = env::var("SOLANA_RPC_URL").unwrap_or("https://api.devnet.solana.com".to_string());
@@ -52,6 +54,7 @@ impl AppConfig {
             mqtt_password,
             mqtt_client_id,
             mqtt_topic,
+            mqtt_response_topic,
             rpc_client,
             payer,
             memo_program_id,

@@ -6,7 +6,10 @@ use std::sync::Arc;
 use colored::*;
 use chrono::TimeZone;
 
-pub async fn process_submit_data(envelope: CryptoEnvelope, config: Arc<AppConfig>) -> Result<String, String> {
+use rumqttc::{AsyncClient, QoS};
+use serde_json::json;
+
+pub async fn process_submit_data(envelope: CryptoEnvelope, config: Arc<AppConfig>, client: AsyncClient) -> Result<String, String> {
 
     println!("📩 Rx Envelope: {}", envelope.public_key.yellow());
 
@@ -56,9 +59,24 @@ pub async fn process_submit_data(envelope: CryptoEnvelope, config: Arc<AppConfig
             
             // Pass config clone to task
             let config_clone = config.clone();
+            let client_clone = client.clone();
+            
             tokio::spawn(async move {
                 match crate::solana::client::catat_ke_blockchain(&log_message, &config_clone) {
-                    Ok(url) => println!("{} {}", "🎉 Tx Sent:".green().bold(), url),
+                    Ok(url) => {
+                        println!("{} {}", "🎉 Tx Sent:".green().bold(), url);
+                        
+                        // FEEDBACK LOOP: Kirim URL balik ke MQTT
+                        let response_payload = json!({
+                            "device_id": data.device_id,
+                            "status": "success",
+                            "tx_url": url,
+                            "timestamp": chrono::Utc::now().timestamp()
+                        });
+                        
+                        // Publish Response
+                        let _ = client_clone.publish(&config_clone.mqtt_response_topic, QoS::AtLeastOnce, false, response_payload.to_string()).await;
+                    }
                     Err(e) => println!("{} {}", "⚠️ Solana Error:".red(), e),
                 }
             });
